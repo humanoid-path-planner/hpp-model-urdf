@@ -30,12 +30,7 @@
 #include <boost/format.hpp>
 
 #include <resource_retriever/retriever.h>
-#include <assimp/DefaultLogger.hpp>
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/IOStream.hpp>
-#include <assimp/IOSystem.hpp>
+
 
 #include <hpp/util/debug.hh>
 #include <hpp/util/assertion.hh>
@@ -49,6 +44,7 @@
 
 #include <hpp/fcl/collision_object.h>
 #include <hpp/fcl/shape/geometric_shapes.h>
+#include <hpp/fcl/mesh_loader/assimp.h> 
 
 namespace fcl {
   HPP_PREDEF_CLASS (CollisionGeometry);
@@ -595,126 +591,7 @@ namespace hpp
 	return position;
       }
 
-      void Parser::buildMesh (const std::string& name,
-                              const ::urdf::Vector3& scale,
-			      const aiScene* scene,
-			      const aiNode* node,
-			      std::vector<unsigned>& subMeshIndexes,
-			      const Parser::PolyhedronPtrType& mesh)
-      {
-	if (!node) return;
-
-	aiMatrix4x4 transform = node->mTransformation;
-	aiNode *pnode = node->mParent;
-	while (pnode)
-	  {
-	    // Don't convert to y-up orientation, which is what the root node in
-	    // Assimp does
-	    if (pnode->mParent != NULL)
-	      transform = pnode->mTransformation * transform;
-	    pnode = pnode->mParent;
-	  }
-
-	for (uint32_t i = 0; i < node->mNumMeshes; i++) {
-	  aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
-
-	  unsigned oldNbPoints = mesh->num_vertices;
-	  unsigned oldNbTriangles = mesh->num_tris;
-
-	  // Add the vertices
-	  for (uint32_t j = 0; j < input_mesh->mNumVertices; j++) {
-	    aiVector3D p = input_mesh->mVertices[j];
-	    p *= transform;
-	    vertices_.push_back (fcl::Vec3f (p.x * scale.x,
-					     p.y * scale.y,
-					     p.z * scale.z));
-	  }
-
-	  // add the indices
-	  for (uint32_t j = 0; j < input_mesh->mNumFaces; j++) {
-	    aiFace& face = input_mesh->mFaces[j];
-            if (face.mNumIndices != 3) {
-              std::stringstream ss;
-              ss << "Mesh " << name << " has a face with "
-                << face.mNumIndices << " vertices. This is not supported\n";
-              ss << "Node name is: " << node->mName.C_Str() << "\n";
-              ss << "Mesh index: " << i << "\n";
-              ss << "Face index: " << j << "\n";
-              throw std::invalid_argument (ss.str());
-            }
-	    // FIXME: can add only triangular faces.
-	    triangles_.push_back (fcl::Triangle
-				  (oldNbPoints + face.mIndices[0],
-				   oldNbPoints + face.mIndices[1],
-				   oldNbPoints + face.mIndices[2]));
-	  }
-
-	  // Save submesh triangles indexes interval.
-	  if (subMeshIndexes.size () == 0)
-	    subMeshIndexes.push_back (0);
-
-	  subMeshIndexes.push_back (oldNbTriangles + input_mesh->mNumFaces);
-	}
-
-	for (uint32_t i=0; i < node->mNumChildren; ++i) {
-	  buildMesh(name, scale, scene, node->mChildren[i], subMeshIndexes, mesh);
-	}
-      }
-
-      void Parser::meshFromAssimpScene (const std::string& name,
-					const ::urdf::Vector3& scale,
-					const aiScene* scene,
-					const Parser::PolyhedronPtrType& mesh)
-      {
-	if (!scene->HasMeshes())
-	  {
-	    throw std::runtime_error (std::string ("No meshes found in file ")+
-				      name);
-	  }
-
-	std::vector<unsigned> subMeshIndexes;
-	int res = mesh->beginModel ();
-	if (res != fcl::BVH_OK) {
-	  std::ostringstream error;
-	  error << "fcl BVHReturnCode = " << res;
-	  throw std::runtime_error (error.str ());
-	}
-	vertices_.clear ();
-	triangles_.clear ();
-	buildMesh (name, scale, scene, scene->mRootNode, subMeshIndexes, mesh);
-	mesh->addSubModel (vertices_, triangles_);
-	mesh->endModel ();
-
-      }
-
-      void Parser::loadPolyhedronFromResource
-      (const std::string& resource_path, const ::urdf::Vector3& scale,
-       const PolyhedronPtrType& polyhedron)
-      {
-       Assimp::Importer importer;
-        // set list of ignored parameters (parameters used for rendering)
-       importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS,
-                        aiComponent_TANGENTS_AND_BITANGENTS|
-                        aiComponent_COLORS |
-                        aiComponent_BONEWEIGHTS |
-                        aiComponent_ANIMATIONS |
-                        aiComponent_LIGHTS |
-                        aiComponent_CAMERAS|
-                        aiComponent_TEXTURES |
-                        aiComponent_TEXCOORDS |
-                        aiComponent_MATERIALS |
-                        aiComponent_NORMALS
-                    );
-       importer.SetIOHandler(new ResourceIOSystem());
-       const aiScene* scene = importer.ReadFile(resource_path, aiProcess_SortByPType|aiProcess_Triangulate | aiProcess_RemoveComponent | aiProcess_JoinIdenticalVertices);
-	if (!scene) {
-	  throw std::runtime_error (std::string ("Could not load resource ") +
-				    resource_path + std::string ("\n") +
-				    importer.GetErrorString ());
-	}
-
-	meshFromAssimpScene (resource_path, scale, scene, polyhedron);
-      }
+      
 
       void Parser::addSolidComponentToJoint (const UrdfLinkConstPtrType& link,
 					     const JointPtr_t& joint)
@@ -739,7 +616,10 @@ namespace hpp
 	  boost::shared_ptr < ::urdf::Mesh> collisionGeometry
 	    = boost::dynamic_pointer_cast< ::urdf::Mesh> (collision->geometry);
 	  std::string collisionFilename = collisionGeometry->filename;
-	  ::urdf::Vector3 scale = collisionGeometry->scale;
+	  fcl::Vec3f scale = fcl::Vec3f(collisionGeometry->scale.x,
+	                                collisionGeometry->scale.y,
+	                                collisionGeometry->scale.z
+	                                );
 	  // Create FCL mesh by parsing Collada file.
 	  PolyhedronPtrType  polyhedron (new PolyhedronType);
 
