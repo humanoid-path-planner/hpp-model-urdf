@@ -890,6 +890,9 @@ namespace hpp
 	joint = objectFactory_.createJointTranslation3 (mat);
 	joint->name (jointName);
 	jointsMap_[jointName] = joint;
+	joint->isBounded (0, false);
+	joint->isBounded (1, false);
+	joint->isBounded (2, false);
 	joint->lowerBound (0, -numeric_limits<double>::infinity());
 	joint->upperBound (0, +numeric_limits<double>::infinity());
 	joint->lowerBound (1, -numeric_limits<double>::infinity());
@@ -928,6 +931,8 @@ namespace hpp
 	joint = objectFactory_.createJointTranslation2 (mat);
 	joint->name (jointName);
 	jointsMap_[jointName] = joint;
+	joint->isBounded (0, false);
+	joint->isBounded (1, false);
 	joint->lowerBound (0, -numeric_limits<double>::infinity());
 	joint->upperBound (0, +numeric_limits<double>::infinity());
 	joint->lowerBound (1, -numeric_limits<double>::infinity());
