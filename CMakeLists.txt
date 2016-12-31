@@ -50,9 +50,14 @@ IF(CMAKE_BUILD_TYPE MATCHES "DEBUG")
   ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 ENDIF(CMAKE_BUILD_TYPE MATCHES "DEBUG")
 
+# Add a cache variable to allow not compiling and running tests
+set (RUN_TESTS TRUE CACHE BOOL "compile and run unit tests")
+
 # Search for Boost.
 # Boost.Test is used by the test suite.
-SEARCH_FOR_BOOST()
+IF (RUN_TESTS)
+  SEARCH_FOR_BOOST()
+ENDIF ()
 
 # Search for dependecies.
 ADD_REQUIRED_DEPENDENCY("assimp")
@@ -86,7 +91,9 @@ INSTALL(FILES ${${PROJECT_NAME}_SRDF_HEADERS}
   )
 
 ADD_SUBDIRECTORY(src)
+IF (RUN_TESTS)
 ADD_SUBDIRECTORY(tests)
+ENDIF ()
 
 PKG_CONFIG_APPEND_LIBS(${PROJECT_NAME})
 
