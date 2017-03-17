@@ -61,8 +61,8 @@ ENDIF ()
 
 # Search for dependecies.
 ADD_REQUIRED_DEPENDENCY("assimp")
-ADD_REQUIRED_DEPENDENCY("hpp-util >= 3")
-ADD_REQUIRED_DEPENDENCY("hpp-model >= 3")
+ADD_REQUIRED_DEPENDENCY("hpp-util >= 3.2")
+ADD_REQUIRED_DEPENDENCY("hpp-model >= 3.2")
 ADD_REQUIRED_DEPENDENCY("resource_retriever")
 ADD_REQUIRED_DEPENDENCY("urdf")
 ADD_REQUIRED_DEPENDENCY("urdfdom")
