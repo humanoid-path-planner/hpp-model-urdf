@@ -160,22 +160,6 @@ namespace hpp
 	MatrixHomogeneousType computeBodyAbsolutePosition
 	(const UrdfLinkConstPtrType& link, const ::urdf::Pose& pose);
 
-	/// \brief Load polyhedron from resource.
-	void loadPolyhedronFromResource
-	(const std::string& filename, const ::urdf::Vector3& scale,
-	 const Parser::PolyhedronPtrType& polyhedron);
-
-	void meshFromAssimpScene (const std::string& name,
-				  const ::urdf::Vector3& scale,
-				  const aiScene* scene,
-				  const PolyhedronPtrType& mesh);
-
-	void buildMesh (const std::string& name,
-                        const ::urdf::Vector3& scale,
-			const aiScene* scene,
-			const aiNode* node,
-			std::vector<unsigned>& subMeshIndexes,
-			const PolyhedronPtrType& mesh);
 
 	/// \brief Add solid component to body.
 	///
@@ -272,8 +256,6 @@ namespace hpp
 	std::string rightFootJointName_;
 	std::string gazeJointName_;
 	/// \}
-	std::vector <fcl::Vec3f> vertices_;
-	std::vector <fcl::Triangle> triangles_;
 	ObjectFactory objectFactory_;
 
         friend class srdf::Parser;
