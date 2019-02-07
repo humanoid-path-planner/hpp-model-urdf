@@ -1,6 +1,10 @@
 hpp-model-urdf
 ========
 
+**This package in not maintained anymore**. Please refer to https://humanoid-path-planner.github.io/hpp-doc/index.html for information about HPP.
+
+------
+
 This package implements a library that allows you to load an hpp-model
 robot by parsing an urdf robot model file.
 
